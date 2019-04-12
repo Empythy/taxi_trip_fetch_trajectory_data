@@ -1,3 +1,4 @@
+import os
 from sqlalchemy_declarative import Trip, Route, Trajectory, RouteTrajectory, TripRoute, TrajectoryPoint, Base
 from sqlalchemy import create_engine, desc, func
 from datetime import date
@@ -10,12 +11,12 @@ DBSession.bind = engine
 session = DBSession()
 
 import pandas as pd
-# infile = '../Dataset/cleaned_taxi_trip_updated_date_2017_q1.csv'
 infile = 'Dataset/cleaned_taxi_trip_updated_date_2017_q1.csv'
 chunksize = 100000
 
 import googlemaps
-gmaps = googlemaps.Client(key='AIzaSyCv4kpEb3WBoH3YXpyn4EgTRKEcom_1VdE')
+import private.keys as pk
+gmaps = googlemaps.Client(key=pk.gmap_key)
 
 
 distance_tolerance = 0.1
@@ -142,32 +143,29 @@ def fetch_trajectory_data(trip, time_slot):
 
 def get_and_fill_trajectory_data():
   i = 1
-  trips = session.query(Trip).filter(Trip.is_complete == False).order_by(func.abs(Trip.distance)).offset(93150).limit(1).all()
-  for trip in trips:
-    print("i--------:", i)
-    display_one_trip(trip)
-    i+=1
-    time_slot = trip.time_start-trip.time_start%100
-    existing_routes = session.query(Route).filter(Route.lng_start == trip.lng_start, Route.lat_start == trip.lat_start, Route.lng_end == trip.lng_end, Route.lat_end == trip.lat_end , Route.time_slot == time_slot).order_by(func.abs(Route.distance-trip.distance), func.abs(Route.trip_duration-trip.trip_duration)).all()
-    # print("existing_routes:", existing_routes.statement.compile(compile_kwargs={"literal_binds": True}))
-    # break
-    if (len(existing_routes)):
-      add_trip_data_from_existing_route(existing_routes, trip)
-    else:
-      fetch_trajectory_data(trip, time_slot)
+  while True:
+    trips = session.query(Trip).filter(Trip.is_complete == False, Trip.distance>0, Trip.trip_duration>0, Trip.date_start<='2017-01-01').order_by(func.abs(Trip.distance)).offset(0).limit(100).all()
+    for trip in trips:
+      print("i--------:", i)
+      i+=1
+      time_slot = trip.time_start-trip.time_start%100
+      existing_routes = session.query(Route).filter(Route.lng_start == trip.lng_start, Route.lat_start == trip.lat_start, Route.lng_end == trip.lng_end, Route.lat_end == trip.lat_end , Route.time_slot == time_slot).order_by(func.abs(Route.distance-trip.distance), func.abs(Route.trip_duration-trip.trip_duration)).all()
+      # print("existing_routes:", existing_routes.statement.compile(compile_kwargs={"literal_binds": True}))
+      if (len(existing_routes)):
+        add_trip_data_from_existing_route(existing_routes, trip)
+      else:
+        fetch_trajectory_data(trip, time_slot)
+    if (len(trips)==0):
+      break
+
 
 def get_and_fill_trajectory_point_data():
   trajectories = session.query(Trajectory).offset(0).limit(5).all()
   display_trajectories(trajectories)
   # for trajectory in trajectories:
 
-
-read_data_from_csv()
-# get_and_fill_trajectory_data()
-# get_and_fill_trajectory_point_data()
-# trip = session.query(Trip).filter(Trip.is_complete == False).all()
-# display_trips(trip)
-
-# trajectory = session.query(Trajectory).first()
-# if (not trajectory):
-#   print(trajectory)
+if __name__ == "__main__":
+  # read_data_from_csv()
+  get_and_fill_trajectory_data()
+  # export test='Hassan'
+  # get_and_fill_trajectory_point_data()
