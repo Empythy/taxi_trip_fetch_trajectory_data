@@ -1,4 +1,6 @@
 import os
+import time
+from datetime import datetime, timedelta
 from sqlalchemy_declarative import Trip, Route, Trajectory, RouteTrajectory, TripRoute, TrajectoryPoint, Base
 from sqlalchemy import create_engine, desc, func
 from datetime import date
@@ -134,7 +136,14 @@ def add_trip_data_from_existing_route(existing_routes, trip):
   update_trip_to_complete(trip, is_distance_time_matched)
 
 def fetch_trajectory_data(trip, time_slot):
-  routes = gmaps.directions((trip.lat_start, trip.lng_start),(trip.lat_end, trip.lng_end), alternatives=True)
+  while True:
+    try:
+      routes = gmaps.directions((trip.lat_start, trip.lng_start),(trip.lat_end, trip.lng_end), alternatives=True)
+      break
+    except Exception:
+      print("Error: Something went wrong while making reqest to google map api.")
+      print("Trying after 60 seconds at: ", datetime.now())
+      time.sleep(60)
   db_routes = []
   for route in routes:
     db_routes.append(add_route_to_db(route, trip, time_slot))
@@ -144,7 +153,7 @@ def fetch_trajectory_data(trip, time_slot):
 def get_and_fill_trajectory_data():
   i = 1
   while True:
-    trips = session.query(Trip).filter(Trip.is_complete == False, Trip.distance>0, Trip.trip_duration>0, Trip.date_start<='2017-01-01').order_by(func.abs(Trip.distance)).offset(0).limit(100).all()
+    trips = session.query(Trip).filter(Trip.is_complete == False, Trip.distance>0, Trip.trip_duration>0, Trip.date_start<='2017-01-01').order_by(Trip.distance).offset(0).limit(100).all()
     for trip in trips:
       print("i--------:", i)
       i+=1
