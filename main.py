@@ -3,7 +3,6 @@ import time
 from datetime import datetime, timedelta
 from sqlalchemy_declarative import Trip, Route, Trajectory, RouteTrajectory, TripRoute, TrajectoryPoint, Base
 from sqlalchemy import create_engine, desc, func
-from datetime import date
 db_folder_path = 'database'
 engine = create_engine('sqlite:///'+db_folder_path+'/chicago_trips.db')
 Base.metadata.bind = engine
