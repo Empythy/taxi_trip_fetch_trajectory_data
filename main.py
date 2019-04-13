@@ -152,7 +152,7 @@ def fetch_trajectory_data(trip, time_slot):
 def get_and_fill_trajectory_data():
   i = 1
   while True:
-    trips = session.query(Trip).filter(Trip.is_complete == False, Trip.distance>0, Trip.trip_duration>0, Trip.date_start<='2017-01-01').order_by(Trip.distance).offset(0).limit(100).all()
+    trips = session.query(Trip).filter(Trip.is_complete == False, Trip.distance>0, Trip.trip_duration>0, Trip.lat_start!=Trip.lat_end, Trip.lng_start!=Trip.lng_end, Trip.date_start<='2017-01-01').order_by(Trip.distance).offset(0).limit(100).all()
     for trip in trips:
       print("i--------:", i)
       i+=1
